@@ -78,23 +78,22 @@ app.layout = html.Div(children=[
     [Input('dropdown', 'value')]
 )
 def update_dropdown_contratos(valor):
-    match valor:
-        case 'BA':
-            options = list(df_ba['CONTRATO SOLIC'].unique())
-            options.append("TODOS OS CONTRATOS")
-            return options
-        case 'SP':
-            options = list(df_sp['CONTRATO SOLIC'].unique())
-            options.append("TODOS OS CONTRATOS")
-            return options
-        case 'RJ':
-            options = list(df_rj['CONTRATO SOLIC'].unique())
-            options.append("TODOS OS CONTRATOS")
-            return options
-        case _:
-            options = list(df_nacional['CONTRATO SOLIC'].unique())
-            options.append("TODOS OS CONTRATOS")
-            return options
+    if valor == 'BA':
+        options = list(df_ba['CONTRATO SOLIC'].unique())
+        options.append("TODOS OS CONTRATOS")
+        return options
+    elif valor == 'SP':
+        options = list(df_sp['CONTRATO SOLIC'].unique())
+        options.append("TODOS OS CONTRATOS")
+        return options
+    elif valor == 'RJ':
+        options = list(df_rj['CONTRATO SOLIC'].unique())
+        options.append("TODOS OS CONTRATOS")
+        return options
+    else:
+        options = list(df_nacional['CONTRATO SOLIC'].unique())
+        options.append("TODOS OS CONTRATOS")
+        return options
 
 
 @app.callback(
@@ -104,15 +103,14 @@ def update_dropdown_contratos(valor):
 )
 def update_table(valor, contrato):
     data = df_nacional
-    match valor:
-        case 'BA':
-            data = df_ba
-        case 'SP':
-            data = df_sp
-        case 'RJ':
-            data = df_rj
-        case _:
-            data = df_nacional
+    if valor == 'BA':
+        data = df_ba
+    elif valor == 'SP':
+        data = df_sp
+    elif valor == 'RJ':
+        data = df_rj
+    else:
+        data = df_nacional
 
     if contrato != "TODOS OS CONTRATOS":
         data = data.loc[data['CONTRATO SOLIC'] == contrato, :]
