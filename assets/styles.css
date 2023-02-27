@@ -1,0 +1,36 @@
+.table {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+.table thead {
+    background-color: lightgray;
+    font-weight: bold;
+}
+
+.table td, .table th {
+    border: 1px solid black;
+}
+
+.column-header-name {
+    text-align: center;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td {
+    text-align: left !important;
+    padding: 10px !important;
+}
+
+label {
+    font-weight: bold;
+}
+
+.group-field {
+    width: 50vw;
+}
+
+.filters {
+    display: flex;
+    margin-bottom: 10px;
+    gap: 10px;
+}
