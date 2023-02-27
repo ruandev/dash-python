@@ -3,6 +3,7 @@ import plotly.express as px
 import pandas as pd
 
 app = Dash(__name__, external_stylesheets=['assets/styles.css'])
+application = app.server
 
 df_ba = pd.read_excel("Controle_Investimentos.xlsx", sheet_name="CONTROLE (BA)", header=3, usecols=range(2, 28))
 df_rj = pd.read_excel("Controle_Investimentos.xlsx", sheet_name="CONTROLE (RJ)", header=3, usecols=range(2, 28))
