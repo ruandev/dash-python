@@ -2,8 +2,8 @@ from dash import Dash, html, dcc, Input, Output, dash_table
 import plotly.express as px
 import pandas as pd
 
-app = Dash(__name__, external_stylesheets=['assets/styles.css'])
-application = app.server
+app = Dash(__name__, external_stylesheets=['https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'])
+server = app.server
 
 df_ba = pd.read_excel("https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx", sheet_name="CONTROLE (BA)", header=3, usecols=range(2, 28))
 df_rj = pd.read_excel("https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx", sheet_name="CONTROLE (RJ)", header=3, usecols=range(2, 28))
