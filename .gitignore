@@ -4,3 +4,5 @@ venv
 .env
 application.zip
 .idea
+.ebextensions
+Procfile
