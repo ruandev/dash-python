@@ -1,5 +1,4 @@
 from dash import Dash, html, dcc, Input, Output, dash_table
-import plotly.express as px
 import pandas as pd
 
 app = Dash(__name__, external_stylesheets=['https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'])
@@ -121,5 +120,5 @@ def update_table(valor, contrato):
 
 
 if __name__ == '__main__':
-    application.run(host='0.0.0.0', port='8080')
-    # app.run_server(debug=True)
+    # application.run(host='0.0.0.0', port='8080')
+    app.run_server()
