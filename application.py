@@ -5,6 +5,8 @@ from flask_caching import Cache
 app = Dash(__name__, external_stylesheets=[
     'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
 ])
+server = app.server
+
 
 # Configuração do cache do Flask
 cache = Cache(app.server, config={
