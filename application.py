@@ -10,8 +10,11 @@ arquivo_excel = pd.ExcelFile("https://github.com/ruandev/dash-python/raw/main/Co
                              engine='openpyxl')
 colunas_utilizadas = range(2, 28)
 df_ba = pd.read_excel(arquivo_excel, sheet_name="CONTROLE (BA)", header=3, usecols=colunas_utilizadas)
+df_ba = df_ba.dropna(subset=['NOME DO ITEM'])
 df_rj = pd.read_excel(arquivo_excel, sheet_name="CONTROLE (RJ)", header=3, usecols=colunas_utilizadas)
+df_rj = df_rj.dropna(subset=['NOME DO ITEM'])
 df_sp = pd.read_excel(arquivo_excel, sheet_name="CONTROLE (SP)", header=3, usecols=colunas_utilizadas)
+df_sp = df_sp.dropna(subset=['NOME DO ITEM'])
 arquivo_excel.close()
 df_nacional = pd.concat([df_ba, df_rj, df_sp])
 
