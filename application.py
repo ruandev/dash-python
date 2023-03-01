@@ -1,14 +1,33 @@
 from dash import Dash, html, dcc, Input, Output, dash_table
 import pandas as pd
+from flask_caching import Cache
 
-app = Dash(__name__, external_stylesheets=['https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'])
-server = app.server
-application = app.server
+app = Dash(__name__, external_stylesheets=[
+    'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
+])
 
-df_ba = pd.read_excel("https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx", sheet_name="CONTROLE (BA)", header=3, usecols=range(2, 28))
-df_rj = pd.read_excel("https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx", sheet_name="CONTROLE (RJ)", header=3, usecols=range(2, 28))
-df_sp = pd.read_excel("https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx", sheet_name="CONTROLE (SP)", header=3, usecols=range(2, 28))
-df_nacional = pd.concat([df_ba, df_rj, df_sp])
+# Configuração do cache do Flask
+cache = Cache(app.server, config={
+    'CACHE_TYPE': 'simple',
+    'CACHE_DEFAULT_TIMEOUT': 3600  # 1 hora de cache
+})
+
+
+# Leitura do arquivo Excel
+@cache.memoize()
+def ler_arquivo_excel():
+    arquivo_excel = pd.ExcelFile("https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx",
+                                 engine='openpyxl')
+    colunas_utilizadas = range(2, 28)
+    planilha_ba = pd.read_excel(arquivo_excel, sheet_name="CONTROLE (BA)", header=3, usecols=colunas_utilizadas)
+    planilha_rj = pd.read_excel(arquivo_excel, sheet_name="CONTROLE (RJ)", header=3, usecols=colunas_utilizadas)
+    planilha_sp = pd.read_excel(arquivo_excel, sheet_name="CONTROLE (SP)", header=3, usecols=colunas_utilizadas)
+    arquivo_excel.close()
+    planilha_nacional = pd.concat([planilha_ba, planilha_rj, planilha_sp])
+    return planilha_ba, planilha_rj, planilha_sp, planilha_nacional
+
+
+df_ba, df_rj, df_sp, df_nacional = ler_arquivo_excel()
 
 
 def generate_table(dataframe):
@@ -58,22 +77,6 @@ app.layout = html.Div(children=[
 ])
 
 
-# @app.callback(
-#     Output('container_table', 'children'),
-#     [Input('dropdown', 'value')]
-# )
-# def update_table(valor):
-#     match valor:
-#         case 'BA':
-#             return generate_table(df_ba)
-#         case 'SP':
-#             return generate_table(df_sp)
-#         case 'RJ':
-#             return generate_table(df_rj)
-#         case _:
-#             return generate_table(df_nacional)
-
-
 @app.callback(
     Output('dropdown-contratos', 'options'),
     [Input('dropdown', 'value')]
@@ -103,7 +106,6 @@ def update_dropdown_contratos(valor):
      Input('dropdown-contratos', 'value')]
 )
 def update_table(valor, contrato):
-    data = df_nacional
     if valor == 'BA':
         data = df_ba
     elif valor == 'SP':
@@ -121,4 +123,4 @@ def update_table(valor, contrato):
 
 if __name__ == '__main__':
     # application.run(host='0.0.0.0', port='8080')
-    app.run_server()
+    app.run_server(debug=True)
