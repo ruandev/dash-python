@@ -4,6 +4,7 @@ import pandas as pd
 
 app = Dash(__name__, external_stylesheets=['https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'])
 server = app.server
+application = app.server
 
 df_ba = pd.read_excel("https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx", sheet_name="CONTROLE (BA)", header=3, usecols=range(2, 28))
 df_rj = pd.read_excel("https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx", sheet_name="CONTROLE (RJ)", header=3, usecols=range(2, 28))
@@ -120,4 +121,5 @@ def update_table(valor, contrato):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    application.run(host='0.0.0.0', port='8080')
+    # app.run_server(debug=True)
