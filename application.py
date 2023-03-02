@@ -2,21 +2,23 @@ import locale
 from dash import Dash, html, dcc, Input, Output, dash_table
 import pandas as pd
 
-url_css_file = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
-url_excel_file = "https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx"
-column_name = 'NOME DO ITEM'
-value_column = 'VALOR [R$]'
-colunas_utilizadas = range(2, 28)
+COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "DATA PREV ENTREGA", "Nº NF ENVIO P/ OBRA",
+                     "STATUS PC", "STATUS OC"]
+
+URL_CSS_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
+URL_EXCEL_FILE = "https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx"
+COLUMN_NAME_ITEM = 'NOME DO ITEM'
+COLUMN_VALUE_ITEM = 'VALOR [R$]'
+USED_COLUMNS = range(2, 28)
 
 # define a localização para português do Brasil
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
-app = Dash(__name__, external_stylesheets=[url_css_file])
+app = Dash(__name__, external_stylesheets=[URL_CSS_FILE])
 server = app.server
 
 # Lê o arquivo excel
-arquivo_excel = pd.ExcelFile(url_excel_file,
-                             engine='openpyxl')
+arquivo_excel = pd.ExcelFile(URL_EXCEL_FILE, engine='openpyxl')
 
 
 def format_column_date(column):
@@ -25,36 +27,47 @@ def format_column_date(column):
     return column
 
 
+def remove_columns(dataframe, columns):
+    for column in columns:
+        dataframe = dataframe.drop(column, axis=1)
+
+    return dataframe
+
+
+# Define função para ler e tratar planilhas
+def read_sheet(sheet_name):
+    df = pd.read_excel(arquivo_excel, sheet_name=sheet_name, header=3, usecols=USED_COLUMNS)
+    df.dropna(subset=[COLUMN_NAME_ITEM], inplace=True)
+    df['DATA TICKET'] = format_column_date(df['DATA TICKET'])
+    df['DATA OC'] = format_column_date(df['DATA OC'])
+    df[COLUMN_VALUE_ITEM] = df[COLUMN_VALUE_ITEM].fillna(0.0).replace('-', 0.0).astype(float)
+    df.drop(columns=COLUMNS_TO_DELETE, inplace=True)
+    return df
+
+
 # Lê as planilhas
-df_ba = pd.read_excel(arquivo_excel, sheet_name="CONTROLE (BA)", header=3, usecols=colunas_utilizadas)
-df_ba = df_ba.dropna(subset=[column_name])
-df_ba['DATA TICKET'] = format_column_date(df_ba['DATA TICKET'])
-df_rj = pd.read_excel(arquivo_excel, sheet_name="CONTROLE (RJ)", header=3, usecols=colunas_utilizadas)
-df_rj = df_rj.dropna(subset=[column_name])
-df_rj['DATA TICKET'] = format_column_date(df_rj['DATA TICKET'])
-df_sp = pd.read_excel(arquivo_excel, sheet_name="CONTROLE (SP)", header=3, usecols=colunas_utilizadas)
-df_sp = df_sp.dropna(subset=[column_name])
-df_sp['DATA TICKET'] = format_column_date(df_sp['DATA TICKET'])
+df_ba = read_sheet("CONTROLE (BA)")
+df_rj = read_sheet("CONTROLE (RJ)")
+df_sp = read_sheet("CONTROLE (SP)")
 
 # Junta todas as planilhas em uma
 df_nacional = pd.concat([df_ba, df_rj, df_sp])
 
-# Configurar a coluna ['VALOR [R$]'] para quantificar sem erros
-df_nacional[value_column] = df_nacional[value_column].fillna(0.0)
-df_nacional[value_column] = df_nacional[value_column].replace('-', 0.0)
-df_nacional[value_column] = df_nacional[value_column].astype(float)
-
 # Quantificar a coluna ['VALOR [R$]']
-investimento_por_fornecedor = df_nacional.groupby('FORNECEDOR')[value_column].sum()
+investimento_por_fornecedor = df_nacional.groupby('FORNECEDOR')[COLUMN_VALUE_ITEM].sum()
 df_investimento_fornecedor = pd.DataFrame(investimento_por_fornecedor).reset_index()
-investimento_por_contrato = df_nacional.groupby('CONTRATO SOLIC')[value_column].sum()
+investimento_por_contrato = df_nacional.groupby('CONTRATO SOLIC')[COLUMN_VALUE_ITEM].sum()
 df_investimento_contrato = pd.DataFrame(investimento_por_contrato).reset_index()
 
-# Formatação da coluna e adição do símbolo de real
-df_investimento_fornecedor[value_column] = df_investimento_fornecedor[value_column].apply(
+# Formatação da coluna de valor e adição do símbolo de real
+df_investimento_fornecedor[[COLUMN_VALUE_ITEM]] = df_investimento_fornecedor[[COLUMN_VALUE_ITEM]].applymap(
     lambda x: locale.currency(x, grouping=True))
-df_investimento_contrato[value_column] = df_investimento_contrato[value_column].apply(
+df_investimento_contrato[[COLUMN_VALUE_ITEM]] = df_investimento_contrato[[COLUMN_VALUE_ITEM]].applymap(
     lambda x: locale.currency(x, grouping=True))
+df_ba[[COLUMN_VALUE_ITEM]] = df_ba[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
+df_rj[[COLUMN_VALUE_ITEM]] = df_rj[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
+df_sp[[COLUMN_VALUE_ITEM]] = df_sp[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
+df_nacional[[COLUMN_VALUE_ITEM]] = df_nacional[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
 
 
 def generate_table(dataframe):
