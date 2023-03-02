@@ -1,3 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+}
+
 .table {
     border: 1px solid black;
     border-collapse: collapse;
@@ -14,6 +20,7 @@
 
 .column-header-name {
     text-align: center;
+    font-weight: bold;
 }
 
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td {
@@ -22,7 +29,7 @@
 }
 
 label {
-    font-weight: bold;
+    font-weight: 500;
 }
 
 .group-field {
@@ -33,4 +40,8 @@ label {
     display: flex;
     margin: 15px 0;
     gap: 10px;
+}
+
+.tab span {
+    font-weight: 500;
 }
