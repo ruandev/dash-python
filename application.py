@@ -1,8 +1,9 @@
 import locale
 from dash import Dash, html, dcc, Input, Output, dash_table
 import pandas as pd
+import plotly.express as px
 
-COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "DATA PREV ENTREGA", "Nº NF ENVIO P/ OBRA",
+COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "COMPRADOR", "DATA PREV ENTREGA", "Nº NF ENVIO P/ OBRA",
                      "STATUS PC", "STATUS OC"]
 
 URL_CSS_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
@@ -58,16 +59,22 @@ investimento_por_fornecedor = df_nacional.groupby('FORNECEDOR')[COLUMN_VALUE_ITE
 df_investimento_fornecedor = pd.DataFrame(investimento_por_fornecedor).reset_index()
 investimento_por_contrato = df_nacional.groupby('CONTRATO SOLIC')[COLUMN_VALUE_ITEM].sum()
 df_investimento_contrato = pd.DataFrame(investimento_por_contrato).reset_index()
-
-# Formatação da coluna de valor e adição do símbolo de real
-df_investimento_fornecedor[[COLUMN_VALUE_ITEM]] = df_investimento_fornecedor[[COLUMN_VALUE_ITEM]].applymap(
-    lambda x: locale.currency(x, grouping=True))
-df_investimento_contrato[[COLUMN_VALUE_ITEM]] = df_investimento_contrato[[COLUMN_VALUE_ITEM]].applymap(
-    lambda x: locale.currency(x, grouping=True))
 df_ba[[COLUMN_VALUE_ITEM]] = df_ba[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
 df_rj[[COLUMN_VALUE_ITEM]] = df_rj[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
 df_sp[[COLUMN_VALUE_ITEM]] = df_sp[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
-df_nacional[[COLUMN_VALUE_ITEM]] = df_nacional[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
+
+grafico_fornecedores = px.pie(df_investimento_fornecedor,
+                              names='FORNECEDOR',
+                              labels='FORNECEDOR',
+                              values=COLUMN_VALUE_ITEM)
+grafico_contrato = px.pie(df_investimento_contrato, names="CONTRATO SOLIC", values=COLUMN_VALUE_ITEM)
+# Formatação da coluna de valor e adição do símbolo de real
+df_investimento_fornecedor[[COLUMN_VALUE_ITEM]] = df_investimento_fornecedor[[COLUMN_VALUE_ITEM]].applymap(
+    lambda x: locale.currency(x, grouping=True))
+df_nacional[[COLUMN_VALUE_ITEM]] = df_nacional[[COLUMN_VALUE_ITEM]].applymap(
+    lambda x: locale.currency(x, grouping=True))
+df_investimento_contrato[[COLUMN_VALUE_ITEM]] = df_investimento_contrato[[COLUMN_VALUE_ITEM]].applymap(
+    lambda x: locale.currency(x, grouping=True))
 
 
 def generate_table(dataframe):
@@ -83,8 +90,7 @@ def generate_table(dataframe):
 
 
 app.layout = html.Div(children=[
-    html.H1(children='Estoque'),
-    html.H2(children='Algum texto legal... sem ideia por enquanto'),
+    html.H1(children='Controle de Investimentos'),
 
     dcc.Tabs(
         value="tab-1",
@@ -129,11 +135,9 @@ app.layout = html.Div(children=[
                     html.Div(
                         children=[
                             html.H2(children='Soma de valores pagos por fornecedor'),
-                            dash_table.DataTable(
-                                id='table_fornecedor',
-                                columns=[{"name": i, "id": i} for i in df_investimento_fornecedor.columns],
-                                data=df_investimento_fornecedor.to_dict('records'),
-                                page_size=10,
+                            dcc.Graph(
+                                id='graf-fornecedor',
+                                figure=grafico_fornecedores
                             )
                         ]
                     )
@@ -146,11 +150,9 @@ app.layout = html.Div(children=[
                     html.Div(
                         children=[
                             html.H2(children='Soma de valores pagos por contrato'),
-                            dash_table.DataTable(
-                                id='table_contrato',
-                                columns=[{"name": i, "id": i} for i in df_investimento_contrato.columns],
-                                data=df_investimento_contrato.to_dict('records'),
-                                page_size=10,
+                            dcc.Graph(
+                                id='graf-contrato',
+                                figure=grafico_contrato
                             ),
                         ]
                     )
