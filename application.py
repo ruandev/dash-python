@@ -2,6 +2,7 @@ import locale
 from dash import Dash, html, dcc, Input, Output, dash_table
 import pandas as pd
 import plotly.express as px
+import dask.dataframe as dd
 
 COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "COMPRADOR", "DATA PREV ENTREGA", "Nº NF ENVIO P/ OBRA",
                      "STATUS PC", "STATUS OC"]
@@ -23,7 +24,7 @@ arquivo_excel = pd.ExcelFile(URL_EXCEL_FILE, engine='openpyxl')
 
 
 def format_column_date(column):
-    column = pd.to_datetime(column)
+    column = pd.to_datetime(column, errors='coerce')
     column = column.dt.strftime('%d/%m/%Y')
     return column
 
@@ -41,6 +42,7 @@ def read_sheet(sheet_name):
     df.dropna(subset=[COLUMN_NAME_ITEM], inplace=True)
     df['DATA TICKET'] = format_column_date(df['DATA TICKET'])
     df['DATA OC'] = format_column_date(df['DATA OC'])
+    df['DATA REAL DE ENTREGA'] = format_column_date(df['DATA REAL DE ENTREGA'])
     df[COLUMN_VALUE_ITEM] = df[COLUMN_VALUE_ITEM].fillna(0.0).replace('-', 0.0).astype(float)
     df.drop(columns=COLUMNS_TO_DELETE, inplace=True)
     return df
@@ -53,6 +55,11 @@ df_sp = read_sheet("CONTROLE (SP)")
 
 # Junta todas as planilhas em uma
 df_nacional = pd.concat([df_ba, df_rj, df_sp])
+dask_df_nacional = dd.from_pandas(df_nacional, npartitions=10)
+
+# Lista de todos os contratos
+contratos = list(df_nacional['CONTRATO SOLIC'].unique())
+contratos.append("TODOS OS CONTRATOS")
 
 # Quantificar a coluna ['VALOR [R$]']
 investimento_por_fornecedor = df_nacional.groupby('FORNECEDOR')[COLUMN_VALUE_ITEM].sum()
@@ -129,16 +136,30 @@ app.layout = html.Div(children=[
                     html.Div(id='container_table'),
                 ]),
             dcc.Tab(
-                label="Investimento por Fornecedor",
+                label="Itens Disponíveis",
                 value="tab-2",
                 children=[
                     html.Div(
                         children=[
-                            html.H2(children='Soma de valores pagos por fornecedor'),
-                            dcc.Graph(
-                                id='graf-fornecedor',
-                                figure=grafico_fornecedores
-                            )
+                            html.Div(
+                                className="filters",
+                                children=[
+                                    html.Div(
+                                        className="group-field",
+                                        children=[
+                                            html.Label(children="Contratos",
+                                                       htmlFor="dropdown-contratos-itens-disponiveis"),
+                                            dcc.Dropdown(
+                                                id='dropdown-contratos-itens-disponiveis',
+                                                className="filter-field",
+                                                options=contratos,
+                                                value="TODOS OS CONTRATOS"
+                                            ),
+                                        ])
+                                ]
+                            ),
+
+                            html.Div(id='container_table_itens_disponiveis'),
                         ]
                     )
                 ]
@@ -207,6 +228,23 @@ def update_table(valor, contrato):
     return generate_table(data)
 
 
+@app.callback(
+    Output('container_table_itens_disponiveis', 'children'),
+    [Input('dropdown-contratos-itens-disponiveis', 'value')]
+)
+def update_table_itens_disponiveis(contrato):
+    filtro_dask = (dask_df_nacional["DATA REAL DE ENTREGA"].notnull()) & (
+        dask_df_nacional["DATA DE ENVIO P/ OBRA"].isnull())
+
+    if contrato != "TODOS OS CONTRATOS":
+        filtro_dask = filtro_dask & (dask_df_nacional['CONTRATO SOLIC'] == contrato)
+
+    return generate_table(dask_df_nacional.loc[filtro_dask, ["NOME DO ITEM",
+                                                             "CONTRATO SOLIC",
+                                                             "FILIAL",
+                                                             "NÚMERO DO PATRIMÔNIO",
+                                                             "DATA REAL DE ENTREGA"]].compute())
+
+
 if __name__ == '__main__':
-    # application.run(host='0.0.0.0', port='8080')
     app.run_server(debug=True)
