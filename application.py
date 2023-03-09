@@ -3,12 +3,14 @@ from dash import Dash, html, dcc, Input, Output, dash_table
 import pandas as pd
 import plotly.express as px
 import dask.dataframe as dd
+from dask import delayed
 
 COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "COMPRADOR", "DATA PREV ENTREGA", "Nº NF ENVIO P/ OBRA",
                      "STATUS PC", "STATUS OC"]
 
 URL_CSS_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
-URL_EXCEL_FILE = "https://github.com/ruandev/dash-python/raw/main/Controle_Investimentos.xlsx"
+URL_EXCEL_FILE = "https://archive.org/download/controle-investimentos/Controle_Investimentos.xlsx"
+URL_LOGO_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/logo.jpg'
 COLUMN_NAME_ITEM = 'NOME DO ITEM'
 COLUMN_VALUE_ITEM = 'VALOR [R$]'
 USED_COLUMNS = range(2, 28)
@@ -62,26 +64,44 @@ contratos = list(df_nacional['CONTRATO SOLIC'].unique())
 contratos.append("TODOS OS CONTRATOS")
 
 # Quantificar a coluna ['VALOR [R$]']
-investimento_por_fornecedor = df_nacional.groupby('FORNECEDOR')[COLUMN_VALUE_ITEM].sum()
-df_investimento_fornecedor = pd.DataFrame(investimento_por_fornecedor).reset_index()
 investimento_por_contrato = df_nacional.groupby('CONTRATO SOLIC')[COLUMN_VALUE_ITEM].sum()
 df_investimento_contrato = pd.DataFrame(investimento_por_contrato).reset_index()
 df_ba[[COLUMN_VALUE_ITEM]] = df_ba[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
 df_rj[[COLUMN_VALUE_ITEM]] = df_rj[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
 df_sp[[COLUMN_VALUE_ITEM]] = df_sp[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
 
-grafico_fornecedores = px.pie(df_investimento_fornecedor,
-                              names='FORNECEDOR',
-                              labels='FORNECEDOR',
-                              values=COLUMN_VALUE_ITEM)
 grafico_contrato = px.pie(df_investimento_contrato, names="CONTRATO SOLIC", values=COLUMN_VALUE_ITEM)
 # Formatação da coluna de valor e adição do símbolo de real
-df_investimento_fornecedor[[COLUMN_VALUE_ITEM]] = df_investimento_fornecedor[[COLUMN_VALUE_ITEM]].applymap(
-    lambda x: locale.currency(x, grouping=True))
 df_nacional[[COLUMN_VALUE_ITEM]] = df_nacional[[COLUMN_VALUE_ITEM]].applymap(
     lambda x: locale.currency(x, grouping=True))
 df_investimento_contrato[[COLUMN_VALUE_ITEM]] = df_investimento_contrato[[COLUMN_VALUE_ITEM]].applymap(
     lambda x: locale.currency(x, grouping=True))
+
+
+@delayed
+def get_data_dask(valor):
+    if valor == 'BA':
+        return dd.from_pandas(df_ba, npartitions=1)
+    elif valor == 'SP':
+        return dd.from_pandas(df_sp, npartitions=1)
+    elif valor == 'RJ':
+        return dd.from_pandas(df_rj, npartitions=1)
+    else:
+        return dd.from_pandas(df_nacional, npartitions=1)
+
+
+@delayed
+def filter_data(data, contrato):
+    if contrato != "TODOS OS CONTRATOS":
+        data = data.loc[data['CONTRATO SOLIC'] == contrato, :]
+    return data
+
+
+@delayed
+def generate_data(data):
+    # converter o Dask DataFrame para um pandas DataFrame
+    df = data.compute()
+    return df.to_dict('records')
 
 
 def generate_table(dataframe):
@@ -92,13 +112,17 @@ def generate_table(dataframe):
         data=dataframe.to_dict('records'),
         page_size=10,
         style_table={'className': 'table'},
-        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#DDDDDD'},
+        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#004b75a6'},
                                 {'if': {'row_index': 'even'}, 'backgroundColor': '#FFFFFF'}])
 
 
 app.layout = html.Div(children=[
-    html.H1(children='Controle de Investimentos'),
-
+    html.Header(
+        children=[
+            html.H1(children='Controle de Investimentos'),
+            html.Img(src=URL_LOGO_FILE)
+        ]
+    ),
     dcc.Tabs(
         value="tab-1",
         children=[
@@ -171,6 +195,7 @@ app.layout = html.Div(children=[
                     html.Div(
                         children=[
                             html.H2(children='Soma de valores pagos por contrato'),
+                            generate_table(df_investimento_contrato),
                             dcc.Graph(
                                 id='graf-contrato',
                                 figure=grafico_contrato
@@ -213,19 +238,10 @@ def update_dropdown_contratos(valor):
      Input('dropdown-contratos', 'value')]
 )
 def update_table(valor, contrato):
-    if valor == 'BA':
-        data = df_ba
-    elif valor == 'SP':
-        data = df_sp
-    elif valor == 'RJ':
-        data = df_rj
-    else:
-        data = df_nacional
-
-    if contrato != "TODOS OS CONTRATOS":
-        data = data.loc[data['CONTRATO SOLIC'] == contrato, :]
-
-    return generate_table(data)
+    data = get_data_dask(valor)
+    data = filter_data(data, contrato)
+    data = generate_data(data)
+    return generate_table(pd.DataFrame(data.compute()))
 
 
 @app.callback(
