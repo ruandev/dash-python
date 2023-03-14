@@ -128,7 +128,7 @@ app.layout = html.Div(children=[
         children=[
             dcc.Tab(
                 value="tab-1",
-                label="Estoque",
+                label="Acompanhamento de solicitações",
                 children=[
                     html.Div(className="filters",
                              children=[
@@ -179,7 +179,15 @@ app.layout = html.Div(children=[
                                                 options=contratos,
                                                 value="TODOS OS CONTRATOS"
                                             ),
-                                        ])
+                                        ]),
+                                    html.A(
+                                        className="btn",
+                                        href="https://helpdesk.priner.com.br/support/home",
+                                        target="_blank",
+                                        children=[
+                                            html.Button('Solicitar equipamentos')
+                                        ]
+                                    ),
                                 ]
                             ),
 
