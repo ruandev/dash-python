@@ -117,6 +117,11 @@ def generate_table(dataframe):
 
 
 app.layout = html.Div(children=[
+    html.Link(
+        rel='icon',
+        type='image/png',
+        href='https://www.priner.com.br/wp-content/themes/priner/images/favicon.png'
+    ),
     html.Header(
         children=[
             html.H1(children='Controle de Investimentos'),
@@ -128,7 +133,7 @@ app.layout = html.Div(children=[
         children=[
             dcc.Tab(
                 value="tab-1",
-                label="Acompanhamento de solicitações",
+                label="Acompanhamento de Solicitações",
                 children=[
                     html.Div(className="filters",
                              children=[
@@ -269,6 +274,8 @@ def update_table_itens_disponiveis(contrato):
                                                              "NÚMERO DO PATRIMÔNIO",
                                                              "DATA REAL DE ENTREGA"]].compute())
 
+
+app.title = "Controle de Investimentos | Priner"
 
 if __name__ == '__main__':
     app.run_server(debug=True)
