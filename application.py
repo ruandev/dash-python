@@ -11,6 +11,7 @@ COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "COMPRADOR", "DA
 URL_CSS_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
 URL_EXCEL_FILE = "https://archive.org/download/controle-investimentos/Controle_Investimentos.xlsx"
 URL_LOGO_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/logo.jpg'
+URL_HELPDESK = 'https://helpdesk.priner.com.br/support/catalog/items/96'
 COLUMN_NAME_ITEM = 'NOME DO ITEM'
 COLUMN_VALUE_ITEM = 'VALOR [R$]'
 USED_COLUMNS = range(2, 28)
@@ -187,7 +188,7 @@ app.layout = html.Div(children=[
                                         ]),
                                     html.A(
                                         className="btn",
-                                        href="https://helpdesk.priner.com.br/support/home",
+                                        href=URL_HELPDESK,
                                         target="_blank",
                                         children=[
                                             html.Button('Solicitar equipamentos')
