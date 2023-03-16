@@ -45,6 +45,8 @@ def read_sheet(sheet_name):
     df.dropna(subset=[COLUMN_NAME_ITEM], inplace=True)
     df['DATA TICKET'] = format_column_date(df['DATA TICKET'])
     df['DATA OC'] = format_column_date(df['DATA OC'])
+    df['DATA PC'] = format_column_date(df['DATA PC'])
+    df['DATA DE ENVIO P/ OBRA'] = format_column_date(df['DATA DE ENVIO P/ OBRA'])
     df['DATA REAL DE ENTREGA'] = format_column_date(df['DATA REAL DE ENTREGA'])
     df[COLUMN_VALUE_ITEM] = df[COLUMN_VALUE_ITEM].fillna(0.0).replace('-', 0.0).astype(float)
     df.drop(columns=COLUMNS_TO_DELETE, inplace=True)
@@ -151,7 +153,8 @@ app.layout = html.Div(children=[
                                                  {'label': 'São Paulo', 'value': 'SP'},
                                                  {'label': 'Rio de Janeiro', 'value': 'RJ'}
                                              ],
-                                             value='N'
+                                             value='N',
+                                             clearable=False
                                          ), ]),
                                  html.Div(
                                      className="group-field",
@@ -160,7 +163,8 @@ app.layout = html.Div(children=[
                                          dcc.Dropdown(
                                              id='dropdown-contratos',
                                              className="filter-field",
-                                             value="TODOS OS CONTRATOS"
+                                             value="TODOS OS CONTRATOS",
+                                             clearable=False
                                          ), ]), ]),
 
                     html.Div(id='container_table'),
@@ -183,7 +187,8 @@ app.layout = html.Div(children=[
                                                 id='dropdown-contratos-itens-disponiveis',
                                                 className="filter-field",
                                                 options=contratos,
-                                                value="TODOS OS CONTRATOS"
+                                                value="TODOS OS CONTRATOS",
+                                                clearable=False
                                             ),
                                         ]),
                                     html.A(
