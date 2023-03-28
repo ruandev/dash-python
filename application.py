@@ -114,7 +114,7 @@ def generate_table(dataframe):
                                                                                  'type': 'datetime'} for coluna in
                  dataframe.columns],
         data=dataframe.to_dict('records'),
-        page_size=10,
+        page_size=20,
         style_table={'className': 'table'},
         style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#004b75a6'},
                                 {'if': {'row_index': 'even'}, 'backgroundColor': '#FFFFFF'}])
