@@ -76,8 +76,18 @@ df_ba[[COLUMN_VALUE_ITEM]] = df_ba[[COLUMN_VALUE_ITEM]].applymap(lambda x: local
 df_rj[[COLUMN_VALUE_ITEM]] = df_rj[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
 df_sp[[COLUMN_VALUE_ITEM]] = df_sp[[COLUMN_VALUE_ITEM]].applymap(lambda x: locale.currency(x, grouping=True))
 
-grafico_contrato = px.pie(df_investimento_contrato, names="CONTRATO SOLIC", values=COLUMN_VALUE_ITEM)
 df_investimento_contrato = df_investimento_contrato.sort_values(by=COLUMN_VALUE_ITEM, ascending=False)
+
+grafico_contrato = px.bar(df_investimento_contrato,
+                          x="CONTRATO SOLIC",
+                          y=COLUMN_VALUE_ITEM,
+                          text=df_investimento_contrato[COLUMN_VALUE_ITEM].apply(
+                              lambda x: locale.currency(x, grouping=True)),
+                          log_y=True,
+                          category_orders={"CONTRATO SOLIC": df_investimento_contrato["CONTRATO SOLIC"].tolist()})
+grafico_contrato.update_xaxes(title='Contrato')
+grafico_contrato.update_yaxes(title='Valor do Investimento')
+grafico_contrato.update_layout(xaxis_tickangle=-90, height=700)
 
 # Formatação da coluna de valor e adição do símbolo de real
 df_nacional[[COLUMN_VALUE_ITEM]] = df_nacional[[COLUMN_VALUE_ITEM]].applymap(
