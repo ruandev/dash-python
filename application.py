@@ -4,6 +4,8 @@ import pandas as pd
 import plotly.express as px
 import dask.dataframe as dd
 from dask import delayed
+from io import BytesIO
+import base64
 
 COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "COMPRADOR", "DATA PREV ENTREGA", "Nº NF ENVIO P/ OBRA",
                      "STATUS PC", "STATUS OC"]
@@ -19,7 +21,7 @@ USED_COLUMNS = range(2, 28)
 # define a localização para português do Brasil
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
-app = Dash(__name__, external_stylesheets=[URL_CSS_FILE])
+app = Dash(__name__, external_stylesheets=[URL_CSS_FILE], suppress_callback_exceptions=True)
 server = app.server
 
 # Lê o arquivo excel
@@ -110,8 +112,9 @@ def generate_data(data):
     return df.to_dict('records')
 
 
-def generate_table(dataframe):
+def generate_table(dataframe, aba):
     return dash_table.DataTable(
+        id="tabela-" + aba,
         columns=[{'name': coluna, 'id': coluna} if coluna != 'DATA TICKET' else {'name': coluna, 'id': coluna,
                                                                                  'type': 'datetime'} for coluna in
                  dataframe.columns],
@@ -171,6 +174,14 @@ app.layout = html.Div(children=[
                                          ), ]), ]),
 
                     html.Div(id='container_table'),
+                    html.A(
+                        'Download Excel',
+                        id='download-link',
+                        className="btn",
+                        download='tabela.xlsx',
+                        href='',
+                        target='_blank',
+                    ),
                 ]),
             dcc.Tab(
                 label="Itens Disponíveis",
@@ -217,7 +228,7 @@ app.layout = html.Div(children=[
                     html.Div(
                         children=[
                             html.H2(children='Soma de valores pagos por contrato'),
-                            generate_table(df_investimento_contrato),
+                            generate_table(df_investimento_contrato, "aba-3"),
                             dcc.Graph(
                                 id='graf-contrato',
                                 figure=grafico_contrato
@@ -263,7 +274,7 @@ def update_table(valor, contrato):
     data = get_data_dask(valor)
     data = filter_data(data, contrato)
     data = generate_data(data)
-    return generate_table(pd.DataFrame(data.compute()))
+    return generate_table(pd.DataFrame(data.compute()), "aba-1")
 
 
 @app.callback(
@@ -281,7 +292,23 @@ def update_table_itens_disponiveis(contrato):
                                                              "CONTRATO SOLIC",
                                                              "FILIAL",
                                                              "NÚMERO DO PATRIMÔNIO",
-                                                             "DATA REAL DE ENTREGA"]].compute())
+                                                             "DATA REAL DE ENTREGA"]].compute(), "aba-2")
+
+
+# Função para atualizar o link de download
+@app.callback(
+    Output('download-link', 'href'),
+    Input('tabela-aba-1', 'data'),
+    Input('tabela-aba-1', 'columns'))
+def update_download_link(data, columns):
+    df = pd.DataFrame(data, columns=[c['name'] for c in columns])
+    excel_file = BytesIO()
+    df.to_excel(excel_file, index=False)
+    excel_file.seek(0)
+    excel_binary = excel_file.read()
+    excel_base64 = base64.b64encode(excel_binary).decode('utf-8')
+    href_data_excel = f'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{excel_base64}'
+    return href_data_excel
 
 
 app.title = "Controle de Investimentos | Priner"

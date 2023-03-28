@@ -70,6 +70,7 @@ label {
 	transition: all 0.5s;
 	position: relative;
 	background-color: #004b75;
+	display: block;
 }
 
 .btn::before {
