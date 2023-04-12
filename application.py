@@ -1,22 +1,22 @@
+import base64
 import locale
-from dash import Dash, html, dcc, Input, Output, dash_table
+import pdb
+from io import BytesIO
+
+import dask.dataframe as dd
 import pandas as pd
 import plotly.express as px
-import dask.dataframe as dd
+from dash import Dash, Input, Output, State, callback_context, no_update
+from dash import html, dcc
 from dask import delayed
-from io import BytesIO
-import base64
 
-COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "COMPRADOR", "DATA PREV ENTREGA", "Nº NF ENVIO P/ OBRA",
-                     "STATUS PC", "STATUS OC"]
+from data import read_sheet, read_excel_file, all_contracts
+from functions import generate_table
 
-URL_CSS_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
-URL_EXCEL_FILE = "https://github.com/ruandev/files/raw/main/Controle_Investimentos.xlsx"
 URL_LOGO_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/logo.jpg'
 URL_HELPDESK = 'https://helpdesk.priner.com.br/support/catalog/items/96'
-COLUMN_NAME_ITEM = 'NOME DO ITEM'
+URL_CSS_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
 COLUMN_VALUE_ITEM = 'VALOR [R$]'
-USED_COLUMNS = range(2, 28)
 
 # define a localização para português do Brasil
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
@@ -25,49 +25,16 @@ app = Dash(__name__, external_stylesheets=[URL_CSS_FILE], suppress_callback_exce
 server = app.server
 
 # Lê o arquivo excel
-arquivo_excel = pd.ExcelFile(URL_EXCEL_FILE, engine='openpyxl')
-
-
-def format_column_date(column):
-    column = pd.to_datetime(column, errors='coerce')
-    column = column.dt.strftime('%d/%m/%Y')
-    return column
-
-
-def remove_columns(dataframe, columns):
-    for column in columns:
-        dataframe = dataframe.drop(column, axis=1)
-
-    return dataframe
-
-
-# Define função para ler e tratar planilhas
-def read_sheet(sheet_name):
-    df = pd.read_excel(arquivo_excel, sheet_name=sheet_name, header=3, usecols=USED_COLUMNS)
-    df.dropna(subset=[COLUMN_NAME_ITEM], inplace=True)
-    df['DATA TICKET'] = format_column_date(df['DATA TICKET'])
-    df['DATA OC'] = format_column_date(df['DATA OC'])
-    df['DATA PC'] = format_column_date(df['DATA PC'])
-    df['DATA DE ENVIO P/ OBRA'] = format_column_date(df['DATA DE ENVIO P/ OBRA'])
-    df['DATA REAL DE ENTREGA'] = format_column_date(df['DATA REAL DE ENTREGA'])
-    df[COLUMN_VALUE_ITEM] = df[COLUMN_VALUE_ITEM].fillna(0.0).replace('-', 0.0).astype(float)
-    df['CONTRATO SOLIC'] = df['CONTRATO SOLIC'].fillna('SEM CONTRATO')
-    df.drop(columns=COLUMNS_TO_DELETE, inplace=True)
-    return df
-
+arquivo_excel = read_excel_file()
 
 # Lê as planilhas
-df_ba = read_sheet("CONTROLE (BA)")
-df_rj = read_sheet("CONTROLE (RJ)")
-df_sp = read_sheet("CONTROLE (SP)")
+df_ba = read_sheet(arquivo_excel, "CONTROLE (BA)")
+df_rj = read_sheet(arquivo_excel, "CONTROLE (RJ)")
+df_sp = read_sheet(arquivo_excel, "CONTROLE (SP)")
 
 # Junta todas as planilhas em uma
 df_nacional = pd.concat([df_ba, df_rj, df_sp])
 dask_df_nacional = dd.from_pandas(df_nacional, npartitions=10)
-
-# Lista de todos os contratos
-contratos = list(df_nacional['CONTRATO SOLIC'].unique())
-contratos.append("TODOS OS CONTRATOS")
 
 # Quantificar a coluna ['VALOR [R$]']
 investimento_por_contrato = df_nacional.groupby('CONTRATO SOLIC')[COLUMN_VALUE_ITEM].sum()
@@ -122,19 +89,6 @@ def generate_data(data):
     return df.to_dict('records')
 
 
-def generate_table(dataframe, aba):
-    return dash_table.DataTable(
-        id="tabela-" + aba,
-        columns=[{'name': coluna, 'id': coluna} if coluna != 'DATA TICKET' else {'name': coluna, 'id': coluna,
-                                                                                 'type': 'datetime'} for coluna in
-                 dataframe.columns],
-        data=dataframe.to_dict('records'),
-        page_size=20,
-        style_table={'className': 'table'},
-        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#004b75a6'},
-                                {'if': {'row_index': 'even'}, 'backgroundColor': '#FFFFFF'}])
-
-
 app.layout = html.Div(children=[
     html.Link(
         rel='icon',
@@ -154,35 +108,49 @@ app.layout = html.Div(children=[
                 value="tab-1",
                 label="Acompanhamento de Solicitações",
                 children=[
-                    html.Div(className="filters",
+                    html.Div(className="row",
                              children=[
+                                 html.Div(className="filters",
+                                          children=[
+                                              html.Div(
+                                                  className="group-field",
+                                                  children=[
+                                                      html.Label(children="Base", htmlFor="dropdown"),
+                                                      dcc.Dropdown(
+                                                          id='dropdown',
+                                                          className="filter-field",
+                                                          options=[
+                                                              {'label': 'Nacional', 'value': 'N'},
+                                                              {'label': 'Bahia', 'value': 'BA'},
+                                                              {'label': 'São Paulo', 'value': 'SP'},
+                                                              {'label': 'Rio de Janeiro', 'value': 'RJ'}
+                                                          ],
+                                                          value='N',
+                                                          clearable=False
+                                                      ), ]),
+                                              html.Div(
+                                                  className="group-field",
+                                                  children=[
+                                                      html.Label(children="Contratos",
+                                                                 htmlFor="dropdown-contratos"),
+                                                      dcc.Dropdown(
+                                                          id='dropdown-contratos',
+                                                          className="filter-field",
+                                                          value="TODOS OS CONTRATOS",
+                                                          clearable=False
+                                                      ), ]), ]),
                                  html.Div(
-                                     className="group-field",
-                                     children=[
-                                         html.Label(children="Base", htmlFor="dropdown-contratos"),
-                                         dcc.Dropdown(
-                                             id='dropdown',
-                                             className="filter-field",
-                                             options=[
-                                                 {'label': 'Nacional', 'value': 'N'},
-                                                 {'label': 'Bahia', 'value': 'BA'},
-                                                 {'label': 'São Paulo', 'value': 'SP'},
-                                                 {'label': 'Rio de Janeiro', 'value': 'RJ'}
-                                             ],
-                                             value='N',
-                                             clearable=False
-                                         ), ]),
-                                 html.Div(
-                                     className="group-field",
-                                     children=[
-                                         html.Label(children="Contratos", htmlFor="dropdown-contratos"),
-                                         dcc.Dropdown(
-                                             id='dropdown-contratos',
-                                             className="filter-field",
-                                             value="TODOS OS CONTRATOS",
-                                             clearable=False
-                                         ), ]), ]),
-
+                                     className="filterPC",
+                                     children=[html.Div(
+                                         children=[
+                                             html.Label(children="N° PC", htmlFor="input-pc"),
+                                             dcc.Input(
+                                                 id='input-pc',
+                                                 className="filter-field",
+                                                 value=''
+                                             ), ]),
+                                         html.Button('Filtrar', id='botao-filtrar', className="btn")])
+                             ]),
                     html.Div(id='container_table'),
                     html.A(
                         'Download Excel',
@@ -210,7 +178,7 @@ app.layout = html.Div(children=[
                                             dcc.Dropdown(
                                                 id='dropdown-contratos-itens-disponiveis',
                                                 className="filter-field",
-                                                options=contratos,
+                                                options=all_contracts(df_nacional),
                                                 value="TODOS OS CONTRATOS",
                                                 clearable=False
                                             ),
@@ -278,13 +246,26 @@ def update_dropdown_contratos(valor):
 @app.callback(
     Output('container_table', 'children'),
     [Input('dropdown', 'value'),
-     Input('dropdown-contratos', 'value')]
+     Input('dropdown-contratos', 'value'),
+     Input('botao-filtrar', 'n_clicks')],
+    [State('input-pc', 'value')]
 )
-def update_table(valor, contrato):
-    data = get_data_dask(valor)
-    data = filter_data(data, contrato)
-    data = generate_data(data)
-    return generate_table(pd.DataFrame(data.compute()), "aba-1")
+def update_table(valor, contrato, n_clicks, filtro_pc):
+    triggered_input = callback_context.triggered[0]['prop_id'].split('.')[0]
+    if triggered_input == 'botao-filtrar' and filtro_pc != '':
+        if n_clicks is None:
+            return no_update
+        else:
+            # pdb.set_trace()
+            data = get_data_dask("N")
+            data = data.loc[data['Nº PC'] == float(filtro_pc), :]
+            data = generate_data(data)
+            return generate_table(pd.DataFrame(data.compute()), "aba-1")
+    else:
+        data = get_data_dask(valor)
+        data = filter_data(data, contrato)
+        data = generate_data(data)
+        return generate_table(pd.DataFrame(data.compute()), "aba-1")
 
 
 @app.callback(
