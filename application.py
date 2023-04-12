@@ -15,7 +15,7 @@ from functions import generate_table
 
 URL_LOGO_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/logo.jpg'
 URL_HELPDESK = 'https://helpdesk.priner.com.br/support/catalog/items/96'
-URL_CSS_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
+URL_CSS_FILE = 'assets/styles.css'
 COLUMN_VALUE_ITEM = 'VALOR [R$]'
 
 # define a localização para português do Brasil
@@ -257,10 +257,9 @@ def update_table(valor, contrato, n_clicks, filtro_pc):
             return no_update
         else:
             # pdb.set_trace()
-            data = get_data_dask("N")
-            data = data.loc[data['Nº PC'] == float(filtro_pc), :]
-            data = generate_data(data)
-            return generate_table(pd.DataFrame(data.compute()), "aba-1")
+            filter_by_num_pc = (df_nacional['Nº PC'] == float(filtro_pc)) | (df_nacional['Nº PC'] == filtro_pc)
+            data = df_nacional.loc[filter_by_num_pc]
+            return generate_table(data, "aba-1")
     else:
         data = get_data_dask(valor)
         data = filter_data(data, contrato)
