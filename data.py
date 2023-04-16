@@ -1,7 +1,7 @@
 import pandas as pd
 from functions import format_column_date
 
-URL_EXCEL_FILE = "https://github.com/ruandev/files/raw/main/Controle_Investimentos.xlsx"
+URL_EXCEL_FILE = "https://github.com/ruandev/files/raw/main/Controle_Investimentos_1504.xlsx"
 COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "COMPRADOR", "DATA PREV ENTREGA", "Nº NF ENVIO P/ OBRA",
                      "STATUS PC", "STATUS OC"]
 COLUMN_NAME_ITEM = 'NOME DO ITEM'
