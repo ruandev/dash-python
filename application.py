@@ -201,7 +201,7 @@ app.layout = html.Div(children=[
             ),
             dcc.Tab(
                 value="tab-3",
-                label="Investimento por Contrato",
+                label="Investimento por Contrato (2022/2023)",
                 children=[
                     html.Div(
                         children=[
