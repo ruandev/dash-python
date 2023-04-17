@@ -1,22 +1,22 @@
-import base64
 import locale
-import pdb
-from io import BytesIO
-
-import dask.dataframe as dd
+from dash import Dash, html, dcc, Input, Output, dash_table, State, callback_context, no_update
 import pandas as pd
 import plotly.express as px
-from dash import Dash, Input, Output, State, callback_context, no_update
-from dash import html, dcc
+import dask.dataframe as dd
 from dask import delayed
+from io import BytesIO
+import base64
 
-from data import read_sheet, read_excel_file, all_contracts
-from functions import generate_table
+COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "COMPRADOR", "DATA PREV ENTREGA", "Nº NF ENVIO P/ OBRA",
+                     "STATUS PC", "STATUS OC"]
 
+URL_CSS_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
+URL_EXCEL_FILE = "https://github.com/ruandev/files/raw/main/Controle_Investimentos_1704.xlsx"
 URL_LOGO_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/logo.jpg'
 URL_HELPDESK = 'https://helpdesk.priner.com.br/support/catalog/items/96'
-URL_CSS_FILE = 'assets/styles.css'
+COLUMN_NAME_ITEM = 'NOME DO ITEM'
 COLUMN_VALUE_ITEM = 'VALOR [R$]'
+USED_COLUMNS = range(2, 28)
 
 # define a localização para português do Brasil
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
@@ -25,16 +25,49 @@ app = Dash(__name__, external_stylesheets=[URL_CSS_FILE], suppress_callback_exce
 server = app.server
 
 # Lê o arquivo excel
-arquivo_excel = read_excel_file()
+arquivo_excel = pd.ExcelFile(URL_EXCEL_FILE, engine='openpyxl')
+
+
+def format_column_date(column):
+    column = pd.to_datetime(column, errors='coerce')
+    column = column.dt.strftime('%d/%m/%Y')
+    return column
+
+
+def remove_columns(dataframe, columns):
+    for column in columns:
+        dataframe = dataframe.drop(column, axis=1)
+
+    return dataframe
+
+
+# Define função para ler e tratar planilhas
+def read_sheet(sheet_name):
+    df = pd.read_excel(arquivo_excel, sheet_name=sheet_name, header=3, usecols=USED_COLUMNS)
+    df.dropna(subset=[COLUMN_NAME_ITEM], inplace=True)
+    df['DATA TICKET'] = format_column_date(df['DATA TICKET'])
+    df['DATA OC'] = format_column_date(df['DATA OC'])
+    df['DATA PC'] = format_column_date(df['DATA PC'])
+    df['DATA DE ENVIO P/ OBRA'] = format_column_date(df['DATA DE ENVIO P/ OBRA'])
+    df['DATA REAL DE ENTREGA'] = format_column_date(df['DATA REAL DE ENTREGA'])
+    df[COLUMN_VALUE_ITEM] = df[COLUMN_VALUE_ITEM].fillna(0.0).replace('-', 0.0).astype(float)
+    df['CONTRATO SOLIC'] = df['CONTRATO SOLIC'].fillna('SEM CONTRATO')
+    df.drop(columns=COLUMNS_TO_DELETE, inplace=True)
+    return df
+
 
 # Lê as planilhas
-df_ba = read_sheet(arquivo_excel, "CONTROLE (BA)")
-df_rj = read_sheet(arquivo_excel, "CONTROLE (RJ)")
-df_sp = read_sheet(arquivo_excel, "CONTROLE (SP)")
+df_ba = read_sheet("CONTROLE (BA)")
+df_rj = read_sheet("CONTROLE (RJ)")
+df_sp = read_sheet("CONTROLE (SP)")
 
 # Junta todas as planilhas em uma
 df_nacional = pd.concat([df_ba, df_rj, df_sp])
 dask_df_nacional = dd.from_pandas(df_nacional, npartitions=10)
+
+# Lista de todos os contratos
+contratos = list(df_nacional['CONTRATO SOLIC'].unique())
+contratos.append("TODOS OS CONTRATOS")
 
 # Quantificar a coluna ['VALOR [R$]']
 investimento_por_contrato = df_nacional.groupby('CONTRATO SOLIC')[COLUMN_VALUE_ITEM].sum()
@@ -87,6 +120,19 @@ def generate_data(data):
     # converter o Dask DataFrame para um pandas DataFrame
     df = data.compute()
     return df.to_dict('records')
+
+
+def generate_table(dataframe, aba):
+    return dash_table.DataTable(
+        id="tabela-" + aba,
+        columns=[{'name': coluna, 'id': coluna} if coluna != 'DATA TICKET' else {'name': coluna, 'id': coluna,
+                                                                                 'type': 'datetime'} for coluna in
+                 dataframe.columns],
+        data=dataframe.to_dict('records'),
+        page_size=20,
+        style_table={'className': 'table'},
+        style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#004b75a6'},
+                                {'if': {'row_index': 'even'}, 'backgroundColor': '#FFFFFF'}])
 
 
 app.layout = html.Div(children=[
@@ -178,7 +224,7 @@ app.layout = html.Div(children=[
                                             dcc.Dropdown(
                                                 id='dropdown-contratos-itens-disponiveis',
                                                 className="filter-field",
-                                                options=all_contracts(df_nacional),
+                                                options=contratos,
                                                 value="TODOS OS CONTRATOS",
                                                 clearable=False
                                             ),
