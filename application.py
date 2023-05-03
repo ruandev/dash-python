@@ -52,7 +52,7 @@ def read_sheet(sheet_name):
     df['DATA REAL DE ENTREGA'] = format_column_date(df['DATA REAL DE ENTREGA'])
     df[COLUMN_VALUE_ITEM] = df[COLUMN_VALUE_ITEM].fillna(0.0).replace('-', 0.0).astype(float)
     df['CONTRATO SOLIC'] = df['CONTRATO SOLIC'].fillna('SEM CONTRATO')
-    df['Nº PC'] = df['Nº PC'].astype(str).apply(lambda x: x.zfill(9))
+    # df['Nº PC'] = df['Nº PC'].astype(str).apply(lambda x: x.zfill(9))
     df.drop(columns=COLUMNS_TO_DELETE, inplace=True)
     return df
 
