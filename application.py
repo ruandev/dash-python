@@ -11,7 +11,7 @@ COLUMNS_TO_DELETE = ["DESCRICAO DO PRODUTO", "MARCA", "MODELO", "COMPRADOR", "DA
                      "STATUS PC", "STATUS OC"]
 
 URL_CSS_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/styles.css'
-URL_EXCEL_FILE = "https://github.com/ruandev/files/raw/main/Controle_Investimentos_0205.xlsx"
+URL_EXCEL_FILE = "https://github.com/ruandev/files/raw/main/Controle_Investimentos_0805.xlsx"
 URL_LOGO_FILE = 'https://raw.githubusercontent.com/ruandev/dash-python/main/assets/logo.jpg'
 URL_HELPDESK = 'https://helpdesk.priner.com.br/support/catalog/items/96'
 COLUMN_NAME_ITEM = 'NOME DO ITEM'
